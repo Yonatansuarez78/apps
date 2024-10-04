@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '../firebaseConfig'; 
+import { useNavigate } from 'react-router-dom'
 
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+
   const auth = getAuth(app); // Inicializa el servicio de autenticación
+  const Navigate = useNavigate()
 
   const GoLogin = async (e) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, username, password);
       alert("Inicio de sesión exitoso");
-      // Redirige o realiza otra acción tras el inicio de sesión
+      Navigate('/HomePrivated')
     } catch (error) {
       alert(error.message); // Muestra el error si ocurre
     }

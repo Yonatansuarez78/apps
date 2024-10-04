@@ -1,0 +1,8 @@
+.d-flex {
+    display: flex;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+    /* Permite que este div ocupe el espacio restante */
+}

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../componentes/Navbar';
-import { getFirestore, collection, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { doc, deleteDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { mostrarFactura } from '../utils/facturaUtil';
 
-import { mostrarFactura } from '../utils/facturaUtil'
+import MyPopoverComponent from '../MyPopoverComponent '
 
 function Home() {
     const [productos, setProductos] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', cantidad: '', precioUnitario: '' });
     const [productoAActualizar, setProductoAActualizar] = useState(null);
+
 
     const db = getFirestore();
 
@@ -96,6 +97,9 @@ function Home() {
             // Guardar la factura en Firestore
             await addDoc(collection(db, 'Facturas Panaderia'), factura);
 
+            // Agregar producto al carrito
+            dispatch({ type: 'ADD_TO_CART', payload: producto });
+
             // Preguntar al usuario si desea descargar la factura
             const confirmarDescarga = window.confirm("¿Deseas descargar la factura?");
             if (confirmarDescarga) {
@@ -107,8 +111,6 @@ function Home() {
         }
     };
 
-
-
     const descargarFactura = (producto) => {
         const factura = {
             nombre: producto.nombre,
@@ -119,8 +121,6 @@ function Home() {
         };
         mostrarFactura(factura);
     };
-
-
 
 
 
@@ -178,9 +178,10 @@ function Home() {
                             </div>
                         </div>
                         <div className="modal-footer">
+                            <button type="button" className="btn btn-success" onClick={() => setShowModal(false)}>Agregar Producto</button>
                             <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cerrar</button>
                             <button type="button" className="btn btn-primary" onClick={() => productoAActualizar ? actualizarProducto(productoAActualizar) : agregarProducto()}>
-                                {productoAActualizar ? 'Actualizar Producto' : 'Agregar Producto'}
+                                {productoAActualizar ? 'Actualizar Producto' : 'Finalizar'}
                             </button>
                         </div>
                     </div>
@@ -221,6 +222,9 @@ function Home() {
                     </tbody>
                 </table>
             </div>
+
+            <MyPopoverComponent/>
+
         </div>
     );
 }

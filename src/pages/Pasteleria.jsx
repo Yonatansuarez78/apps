@@ -128,9 +128,6 @@ function Pasteleria() {
     };
 
 
-
-
-
     return (
         <div>
             <Navbar />

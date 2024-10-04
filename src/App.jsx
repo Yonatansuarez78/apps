@@ -7,6 +7,10 @@ import Pasteleria from './pages/Pasteleria'
 
 import Login from './pagesPrivate/Login'
 
+import EstadoVentas from './privated/EstadoVentas'
+import Sidebars from './privated/Sidebars'
+import HomePrivated from './privated/HomePrivated'
+
 
 function App() {
   return (
@@ -17,6 +21,11 @@ function App() {
         <Route path="/Pasteleria" element={<Pasteleria />} />
 
         <Route path="/Login" element={<Login />} />
+
+        <Route path="Sidebars" element={<Sidebars />} />
+        <Route path="EstadoVentas" element={<EstadoVentas />} />
+        <Route path="HomePrivated" element={<HomePrivated />} />
+
       </Routes>
     </BrowserRouter>
   );
