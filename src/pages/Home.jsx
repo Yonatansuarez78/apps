@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Navbar from '../componentes/Navbar';
-import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { mostrarFactura } from '../utils/facturaUtil';
 
-import MyPopoverComponent from '../MyPopoverComponent '
+import { CarritoContext } from "../context/CarritoContext";
 
 function Home() {
     const [productos, setProductos] = useState([]);
     const [showModal, setShowModal] = useState(false);
-    const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', cantidad: '', precioUnitario: '' });
+    const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
     const [productoAActualizar, setProductoAActualizar] = useState(null);
+
+    const { añadirProductoAlCarrito } = useContext(CarritoContext);
 
 
     const db = getFirestore();
@@ -23,24 +25,46 @@ function Home() {
         return () => unsubscribe();
     }, [db]);
 
-    const agregarProducto = async () => {
-        try {
-            const docRef = await addDoc(collection(db, 'Ventas Panaderia'), {
-                nombre: nuevoProducto.nombre,
-                cantidad: nuevoProducto.cantidad,
-                precioUnitario: nuevoProducto.precioUnitario,
-            });
-            const producto = {
-                id: docRef.id,
-                ...nuevoProducto,
-            };
-            setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '' });
-            setShowModal(false);
-            generarFactura(producto);
-        } catch (error) {
-            console.error("Error al agregar producto: ", error);
+    const agregarProducto = async (  ) => {
+        if (nuevoProducto.nombre && nuevoProducto.cantidad && nuevoProducto.precioUnitario) {
+            try {
+                // Calcular precioTotal dependiendo de si ya hay un valor o no
+                const precioTotal = nuevoProducto.precioTotal
+                    ? parseFloat(nuevoProducto.precioTotal) // Si existe, lo usamos
+                    : nuevoProducto.cantidad * nuevoProducto.precioUnitario; // Si no, lo calculamos
+
+                // Crear el objeto del producto
+                const producto = {
+                    nombre: nuevoProducto.nombre,
+                    cantidad: nuevoProducto.cantidad,
+                    precioUnitario: nuevoProducto.precioUnitario,
+                    precioTotal: precioTotal, // Usamos el valor calculado o el proporcionado
+                    fecha: new Date(),
+                };
+                const docRef = await addDoc(collection(db, 'Ventas Panaderia'), producto);
+
+                // Generar la factura y obtener su ID
+                const facturaId = await generarFactura({ ...producto, id: docRef.id }); // Pasar el ID del pedido
+
+                // Actualizar el producto con el ID de la factura
+                if (facturaId) {
+                    await updateDoc(docRef, {
+                        facturaId: facturaId, // Almacenar el ID de la factura en el producto
+                    });
+                }
+
+                setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
+                setShowModal(false);
+            } catch (error) {
+                console.error("Error al agregar producto: ", error);
+            }
+        } else {
+            alert("Todos los campos son requeridos");
         }
     };
+
+
+
 
     const eliminarProducto = async (id) => {
         const confirmacion = window.confirm("¿Estás seguro de que deseas eliminar este producto?");
@@ -60,11 +84,43 @@ function Home() {
     const actualizarProducto = async (id) => {
         try {
             const productoRef = doc(db, 'Ventas Panaderia', id);
+
+            // Obtener el producto actual
+            const productoSnap = await getDoc(productoRef);
+            const productoActual = productoSnap.data();
+
+            if (!productoActual) {
+                console.error("El producto no existe.");
+                return;
+            }
+
+            // Calcular nuevo precioTotal
+            const nuevoPrecioTotal = nuevoProducto.precioTotal
+                ? parseFloat(nuevoProducto.precioTotal) // Si existe, lo usamos
+                : nuevoProducto.cantidad * nuevoProducto.precioUnitario; // Si no, lo calculamos
+
+            // Actualizar producto en 'Ventas Panaderia'
             await updateDoc(productoRef, {
                 nombre: nuevoProducto.nombre,
                 cantidad: nuevoProducto.cantidad,
-                precioUnitario: nuevoProducto.precioUnitario
+                precioUnitario: nuevoProducto.precioUnitario,
+                precioTotal: nuevoPrecioTotal
             });
+
+            // Asumiendo que tienes un campo `facturaId` en el producto
+            const facturaId = productoActual.facturaId; // O el nombre del campo que almacena el ID de la factura
+            if (facturaId) {
+                const facturaRef = doc(db, 'Facturas Panaderia', facturaId); // Usa el ID de la factura
+                await updateDoc(facturaRef, {
+                    nombre: nuevoProducto.nombre,
+                    cantidad: nuevoProducto.cantidad,
+                    precioUnitario: nuevoProducto.precioUnitario,
+                    precioTotal: nuevoPrecioTotal
+                });
+            } else {
+                console.error("No se encontró el ID de la factura.");
+            }
+
             setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '' });
             setShowModal(false);
             setProductoAActualizar(null);
@@ -73,54 +129,80 @@ function Home() {
         }
     };
 
+
+
     const abrirModalActualizar = (producto) => {
         setNuevoProducto({
             nombre: producto.nombre,
             cantidad: producto.cantidad,
-            precioUnitario: producto.precioUnitario
+            precioUnitario: producto.precioUnitario,
+            precioTotal: producto.precioTotal
         });
         setProductoAActualizar(producto.id);
         setShowModal(true);
     };
+    
 
-    // Funcionalidad de la factura
     const generarFactura = async (producto) => {
         try {
+            // Calcular precioTotal dependiendo de si ya hay un valor o no
+            const precioTotal = producto.precioTotal
+                ? parseFloat(producto.precioTotal) // Si existe, lo usamos
+                : producto.cantidad * producto.precioUnitario; // Si no, lo calculamos
+
             const factura = {
                 nombre: producto.nombre,
                 cantidad: producto.cantidad,
                 precioUnitario: producto.precioUnitario,
-                precioTotal: producto.cantidad * producto.precioUnitario,
-                fecha: new Date().toISOString(),
+                precioTotal: precioTotal, // Usamos el valor calculado o el proporcionado
+                fecha: new Date(),
             };
-
-            // Guardar la factura en Firestore
-            await addDoc(collection(db, 'Facturas Panaderia'), factura);
-
-            // Agregar producto al carrito
-            dispatch({ type: 'ADD_TO_CART', payload: producto });
-
+  
             // Preguntar al usuario si desea descargar la factura
             const confirmarDescarga = window.confirm("¿Deseas descargar la factura?");
             if (confirmarDescarga) {
                 // Mostrar el PDF de la factura
                 mostrarFactura(factura);
             }
+
+            const docRef = await addDoc(collection(db, 'Facturas Panaderia'), factura);
+
+            return docRef.id; // Retornar el ID de la factura
         } catch (error) {
             console.error("Error al generar factura: ", error);
         }
     };
+
+
 
     const descargarFactura = (producto) => {
         const factura = {
             nombre: producto.nombre,
             cantidad: producto.cantidad,
             precioUnitario: producto.precioUnitario,
-            precioTotal: producto.cantidad * producto.precioUnitario,
+            precioTotal: producto.precioTotal,
+            // precioTotal: producto.cantidad * producto.precioUnitario,
             fecha: new Date().toISOString(),
         };
         mostrarFactura(factura);
     };
+
+
+    const AñadirAlCarrito = () => {
+        // Verifica que los campos no estén vacíos
+        if (nuevoProducto.nombre && nuevoProducto.cantidad && nuevoProducto.precioUnitario) {
+            añadirProductoAlCarrito(nuevoProducto);
+            // Limpiar campos después de agregar
+            setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
+            setShowModal(false)
+        } else {
+            alert("Todos los campos son requeridos")
+        }
+    };
+
+
+
+
 
 
 
@@ -129,7 +211,7 @@ function Home() {
             <Navbar />
             <button type="button" className="btn btn-primary m-2" onClick={() => {
                 setShowModal(true);
-                setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '' });
+                setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
                 setProductoAActualizar(null);
             }}>
                 Agregar Producto
@@ -176,9 +258,20 @@ function Home() {
                                     required
                                 />
                             </div>
+                            <div className="mb-3">
+                                <label htmlFor="precio" className="form-label">Precio Total</label>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    id="PrecioTotal"
+                                    value={nuevoProducto.precioTotal}
+                                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, precioTotal: e.target.value })}
+                                    required
+                                />
+                            </div>
                         </div>
                         <div className="modal-footer">
-                            <button type="button" className="btn btn-success" onClick={() => setShowModal(false)}>Agregar Producto</button>
+                            <button type="button" className="btn btn-success" onClick={AñadirAlCarrito} >Agregar Mas Producto</button>
                             <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cerrar</button>
                             <button type="button" className="btn btn-primary" onClick={() => productoAActualizar ? actualizarProducto(productoAActualizar) : agregarProducto()}>
                                 {productoAActualizar ? 'Actualizar Producto' : 'Finalizar'}
@@ -209,8 +302,8 @@ function Home() {
                                 <tr key={producto.id}>
                                     <td>{producto.nombre}</td>
                                     <td>{producto.cantidad}</td>
-                                    <td>${parseFloat(producto.precioUnitario).toFixed(2)}</td>
-                                    <td>${(producto.cantidad * producto.precioUnitario).toFixed(2)}</td>
+                                    <td>${parseFloat(producto.precioUnitario)}</td>
+                                    <td>${producto.precioTotal}</td>
                                     <td>
                                         <button className="btn btn-warning btn-sm m-1" onClick={() => abrirModalActualizar(producto)}>Actualizar</button>
                                         <button className="btn btn-info btn-sm m-1" onClick={() => descargarFactura(producto)}>Imprimir</button>
@@ -222,8 +315,6 @@ function Home() {
                     </tbody>
                 </table>
             </div>
-
-            <MyPopoverComponent/>
 
         </div>
     );

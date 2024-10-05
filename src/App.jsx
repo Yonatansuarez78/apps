@@ -11,23 +11,29 @@ import EstadoVentas from './privated/EstadoVentas'
 import Sidebars from './privated/Sidebars'
 import HomePrivated from './privated/HomePrivated'
 
+import { CarritoProvider } from './context/CarritoContext';
+
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Bienvenida />} />
-        <Route path="/Home" element={<Home />} />
-        <Route path="/Pasteleria" element={<Pasteleria />} />
 
-        <Route path="/Login" element={<Login />} />
+    <CarritoProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Bienvenida />} />
+          <Route path="/Home" element={<Home />} />
+          <Route path="/Pasteleria" element={<Pasteleria />} />
 
-        <Route path="Sidebars" element={<Sidebars />} />
-        <Route path="EstadoVentas" element={<EstadoVentas />} />
-        <Route path="HomePrivated" element={<HomePrivated />} />
+          <Route path="/Login" element={<Login />} />
 
-      </Routes>
-    </BrowserRouter>
+          <Route path="Sidebars" element={<Sidebars />} />
+          <Route path="EstadoVentas" element={<EstadoVentas />} />
+          <Route path="HomePrivated" element={<HomePrivated />} />
+
+        </Routes>
+      </BrowserRouter>
+    </CarritoProvider>
+
   );
 }
 
