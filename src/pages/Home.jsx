@@ -28,7 +28,6 @@ function Home() {
     const agregarProducto = async (  ) => {
         if (nuevoProducto.nombre && nuevoProducto.cantidad && nuevoProducto.precioUnitario) {
             try {
-                // Calcular precioTotal dependiendo de si ya hay un valor o no
                 const precioTotal = nuevoProducto.precioTotal
                     ? parseFloat(nuevoProducto.precioTotal) // Si existe, lo usamos
                     : nuevoProducto.cantidad * nuevoProducto.precioUnitario; // Si no, lo calculamos
@@ -44,7 +43,7 @@ function Home() {
                 const docRef = await addDoc(collection(db, 'Ventas Panaderia'), producto);
 
                 // Generar la factura y obtener su ID
-                const facturaId = await generarFactura({ ...producto, id: docRef.id }); // Pasar el ID del pedido
+                const facturaId = await generarFactura({ ...producto, id: docRef.id }, docRef.id); // Pasar el ID del pedido
 
                 // Actualizar el producto con el ID de la factura
                 if (facturaId) {
@@ -143,9 +142,8 @@ function Home() {
     };
     
 
-    const generarFactura = async (producto) => {
+    const generarFactura = async (producto, idVenta) => {
         try {
-            // Calcular precioTotal dependiendo de si ya hay un valor o no
             const precioTotal = producto.precioTotal
                 ? parseFloat(producto.precioTotal) // Si existe, lo usamos
                 : producto.cantidad * producto.precioUnitario; // Si no, lo calculamos
@@ -157,22 +155,23 @@ function Home() {
                 precioTotal: precioTotal, // Usamos el valor calculado o el proporcionado
                 fecha: new Date(),
             };
-  
-            // Preguntar al usuario si desea descargar la factura
+
+            // Crear el documento de factura
+            const docRef = await addDoc(collection(db, 'Facturas Panaderia'), factura);
+            // Actualizar la factura con el ID de la venta
+            await updateDoc(docRef, {
+                idVenta: idVenta, // Guardar el ID de la venta en la factura
+            });
+
             const confirmarDescarga = window.confirm("¿Deseas descargar la factura?");
             if (confirmarDescarga) {
-                // Mostrar el PDF de la factura
                 mostrarFactura(factura);
             }
-
-            const docRef = await addDoc(collection(db, 'Facturas Panaderia'), factura);
-
             return docRef.id; // Retornar el ID de la factura
         } catch (error) {
             console.error("Error al generar factura: ", error);
         }
     };
-
 
 
     const descargarFactura = (producto) => {
@@ -181,28 +180,20 @@ function Home() {
             cantidad: producto.cantidad,
             precioUnitario: producto.precioUnitario,
             precioTotal: producto.precioTotal,
-            // precioTotal: producto.cantidad * producto.precioUnitario,
-            fecha: new Date().toISOString(),
         };
         mostrarFactura(factura);
     };
 
 
     const AñadirAlCarrito = () => {
-        // Verifica que los campos no estén vacíos
         if (nuevoProducto.nombre && nuevoProducto.cantidad && nuevoProducto.precioUnitario) {
             añadirProductoAlCarrito(nuevoProducto);
-            // Limpiar campos después de agregar
             setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
             setShowModal(false)
         } else {
             alert("Todos los campos son requeridos")
         }
     };
-
-
-
-
 
 
 

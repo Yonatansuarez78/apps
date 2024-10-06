@@ -30,7 +30,7 @@ export const mostrarFactura = (factura) => {
     // Detalles de la factura
     const cantidad = factura.cantidad; // Asumiendo que `cantidad` es un número
     const descripcion = factura.nombre; // Nombre del producto
-    const precioUnitario = parseFloat(factura.precioUnitario).toFixed(2);
+    const precioUnitario = factura.precioUnitario;
     const precioTotal = factura.precioTotal;
 
     doc.text(`${cantidad}        ${descripcion}          $${precioUnitario}          $${precioTotal}`, 20, lineY + 10);
@@ -86,7 +86,7 @@ export const mostrarFacturaPasteleria = (factura) => {
     // Detalles de la factura
     const cantidad = factura.cantidad; // Asumiendo que `cantidad` es un número
     const descripcion = factura.nombre; // Nombre del producto
-    const precioUnitario = parseFloat(factura.precioUnitario).toFixed(2);
+    const precioUnitario = factura.precioUnitario;
     const precioTotal = factura.precioTotal;
 
     doc.text(`${cantidad}        ${descripcion}          $${precioUnitario}          $${precioTotal}`, 20, lineY + 10);

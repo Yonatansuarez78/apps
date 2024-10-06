@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect } from "react";
 import { Toast, ToastContainer } from 'react-bootstrap';
-import { collection, addDoc, getFirestore } from 'firebase/firestore'; // Asegúrate de importar addDoc y collection
+import { collection, addDoc, getFirestore, updateDoc } from 'firebase/firestore'; // Asegúrate de importar addDoc y collection
 import { mostrarFacturaPedido } from '../utils/facturaUtil'
+
 
 
 export const CarritoContext = createContext();
@@ -54,15 +55,20 @@ export const CarritoProvider = ({ children }) => {
             const docRef = await addDoc(collection(db, 'Ventas Pedido'), {
                 carrito, // Los productos en el carrito
                 fecha: new Date(), // Fecha del pedido
-                total // Total calculado con cantidades
+                total, // Total calculado con cantidades
             });
 
             // Guardar los datos en la colección 'Factura Ventas Pedido'
-            await addDoc(collection(db, 'Factura Ventas Pedido'), {
+                const facturaRef = await addDoc(collection(db, 'Factura Ventas Pedido'), {
                 carrito, // Los productos en el carrito
                 fecha: new Date(), // Fecha del pedido
                 total, // Total de la factura
                 idPedido: docRef.id // Relacionar con el ID del pedido
+            });
+
+            // Actualizar el pedido en la colección 'Ventas Pedido' con el ID de la factura
+            await updateDoc(docRef, {
+                idFactura: facturaRef.id // Agregar el ID de la factura al documento del pedido
             });
 
             alert('Pedido finalizado con éxito. ID del pedido: ' + docRef.id);

@@ -24,21 +24,29 @@ function Pasteleria() {
 
     const agregarProducto = async () => {
         try {
-            const docRef = await addDoc(collection(db, 'Ventas Pasteleria'), {
+            const producto = {
                 nombre: nuevoProducto.nombre,
                 cantidad: nuevoProducto.cantidad,
                 precioUnitario: nuevoProducto.precioUnitario,
                 precioTotal: nuevoProducto.precioUnitario * cantidad,
                 tipo: nuevoProducto.tipo,
-                fecha: new Date().toISOString()
-            });
-            const producto = {
-                id: docRef.id,
-                ...nuevoProducto,
+                fecha: new Date()
             };
+
+            const docRef = await addDoc(collection(db, 'Ventas Pasteleria'), producto);
+
+            // Generar la factura y obtener su ID
+            const facturaId = await generarFactura({ ...producto, id: docRef.id }, docRef.id); // Pasar el ID del pedido
+
+            // Actualizar el producto con el ID de la factura
+            if (facturaId) {
+                await updateDoc(docRef, {
+                    facturaId: facturaId, // Almacenar el ID de la factura en el producto
+                });
+            }
+            
             setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', tipo: '', fecha: '' });
             setShowModal(false);
-            generarFactura(producto);
         } catch (error) {
             console.error("Error al agregar producto: ", error);
         }
@@ -88,7 +96,7 @@ function Pasteleria() {
     };
 
     // Funcionalidad de la factura
-    const generarFactura = async (producto) => {
+    const generarFactura = async (producto, idVenta) => {
         try {
             const factura = {
                 nombre: producto.nombre,
@@ -96,18 +104,20 @@ function Pasteleria() {
                 tipo: producto.tipo,
                 precioUnitario: producto.precioUnitario,
                 precioTotal: producto.cantidad * producto.precioUnitario,
-                fecha: new Date().toISOString(),
+                fecha: new Date()
             };
 
-            // Guardar la factura en Firestore
-            await addDoc(collection(db, 'Facturas Pasteleria'), factura);
+            const docRef = await addDoc(collection(db, 'Facturas Pasteleria'), factura);
+            await updateDoc(docRef, {
+                idVenta: idVenta, // Guardar el ID de la venta en la factura
+            });
 
-            // Preguntar al usuario si desea descargar la factura
             const confirmarDescarga = window.confirm("¿Deseas descargar la factura?");
             if (confirmarDescarga) {
-                // Mostrar el PDF de la factura
                 mostrarFacturaPasteleria(factura);
             }
+
+            return docRef.id; // Retornar el ID de la factura
         } catch (error) {
             console.error("Error al generar factura: ", error);
         }
@@ -121,8 +131,7 @@ function Pasteleria() {
             cantidad: producto.cantidad,
             tipo: producto.tipo,
             precioUnitario: producto.precioUnitario,
-            precioTotal: producto.cantidad * producto.precioUnitario,
-            fecha: new Date().toISOString(),
+            precioTotal: producto.cantidad * producto.precioUnitario
         };
         mostrarFacturaPasteleria(factura);
     };
@@ -225,8 +234,8 @@ function Pasteleria() {
                                     <td>{producto.nombre}</td>
                                     <td>{producto.cantidad}</td>
                                     <td>{producto.tipo}</td>
-                                    <td>${parseFloat(producto.precioUnitario).toFixed(2)}</td>
-                                    <td>${(producto.cantidad * producto.precioUnitario).toFixed(2)}</td>
+                                    <td>${producto.precioUnitario}</td>
+                                    <td>${(producto.cantidad * producto.precioUnitario)}</td>
                                     <td>
                                         <button className="btn btn-warning btn-sm m-1" onClick={() => abrirModalActualizar(producto)}>Actualizar</button>
                                         <button className="btn btn-info btn-sm m-1" onClick={() => descargarFactura(producto)}>Imprimir</button>
