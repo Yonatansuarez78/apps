@@ -6,6 +6,7 @@ import Pasteleria from './pages/Pasteleria'
 
 
 import Login from './pagesPrivate/Login'
+import NotFound from './pages/NotFound'
 
 import EstadoVentas from './privated/EstadoVentas'
 import Sidebars from './privated/Sidebars'
@@ -29,6 +30,8 @@ function App() {
           <Route path="Sidebars" element={<Sidebars />} />
           <Route path="EstadoVentas" element={<EstadoVentas />} />
           <Route path="HomePrivated" element={<HomePrivated />} />
+
+          <Route path="*" element={<NotFound />} />
 
         </Routes>
       </BrowserRouter>
