@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../componentes/Navbar';
-import { getFirestore, collection, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
 import { doc, deleteDoc } from "firebase/firestore";
 
 import { mostrarFacturaPasteleria } from '../utils/facturaUtil'
@@ -24,19 +24,32 @@ function Pasteleria() {
 
     const agregarProducto = async () => {
         try {
+            if (!nuevoProducto.nombre || !nuevoProducto.cantidad || !nuevoProducto.precioUnitario || !nuevoProducto.tipo) {
+                throw new Error("Por favor, completa todos los campos.");
+            }
+            const cantidadNumero = parseFloat(nuevoProducto.cantidad);
+            const precioUnitarioNumero = parseFloat(nuevoProducto.precioUnitario);
+
+            // Asegurarse de que los valores sean números válidos
+            if (isNaN(cantidadNumero) || isNaN(precioUnitarioNumero)) {
+                throw new Error("Cantidad o precio unitario no son válidos.");
+            }
+
             const producto = {
                 nombre: nuevoProducto.nombre,
-                cantidad: nuevoProducto.cantidad,
-                precioUnitario: nuevoProducto.precioUnitario,
-                precioTotal: nuevoProducto.precioUnitario * cantidad,
+                cantidad: cantidadNumero,
+                precioUnitario: precioUnitarioNumero,
+                precioTotal: precioUnitarioNumero * cantidadNumero, // Calcular el precio total
                 tipo: nuevoProducto.tipo,
                 fecha: new Date()
             };
 
+            console.log(producto);
             const docRef = await addDoc(collection(db, 'Ventas Pasteleria'), producto);
 
             // Generar la factura y obtener su ID
             const facturaId = await generarFactura({ ...producto, id: docRef.id }, docRef.id); // Pasar el ID del pedido
+            console.log(facturaId);
 
             // Actualizar el producto con el ID de la factura
             if (facturaId) {
@@ -44,45 +57,97 @@ function Pasteleria() {
                     facturaId: facturaId, // Almacenar el ID de la factura en el producto
                 });
             }
-            
+
             setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', tipo: '', fecha: '' });
             setShowModal(false);
         } catch (error) {
             console.error("Error al agregar producto: ", error);
+            alert(error.message); // Muestra el mensaje de error al usuario
         }
     };
+
+
 
     const eliminarProducto = async (id) => {
         const confirmacion = window.confirm("¿Estás seguro de que deseas eliminar este producto?");
         if (confirmacion) {
             try {
                 const productoRef = doc(db, 'Ventas Pasteleria', id);
-                await deleteDoc(productoRef);
-                console.log("Producto eliminado con éxito.");
+                const productoDoc = await getDoc(productoRef);
+                if (productoDoc.exists()) {
+                    const facturaId = productoDoc.data().facturaId; // Asegúrate de que 'facturaId' es el campo correcto
+
+                    // Eliminar el documento en la colección Ventas Panaderia
+                    await deleteDoc(productoRef);
+                    // Eliminar el documento en la colección Facturas Panaderia
+                    const facturaRef = doc(db, 'Facturas Pasteleria', facturaId);
+                    await deleteDoc(facturaRef);
+                } else {
+                    console.log("El documento en Ventas Panaderia no existe.");
+                }
             } catch (error) {
-                console.error("Error al eliminar producto: ", error);
+                alert("Error al eliminar producto", error)
             }
         } else {
             console.log("Eliminación cancelada.");
         }
     };
 
+
+
     const actualizarProducto = async (id) => {
         try {
             const productoRef = doc(db, 'Ventas Pasteleria', id);
+
+            // Obtener el documento actual para acceder a `facturaId`
+            const productoActualDoc = await getDoc(productoRef);
+
+            if (!productoActualDoc.exists()) {
+                console.error('No se encontró el documento de producto con ID:', id);
+                return;
+            }
+
+            const productoActual = productoActualDoc.data();
+
+            // Obtener el ID de la factura desde el producto actual
+            const facturaId = productoActual.facturaId; // Asegúrate de que este campo exista
+
+            // Recalcular el precioTotal en base a los nuevos valores
+            const nuevoPrecioTotal =
+                (parseFloat(nuevoProducto.cantidad || productoActual.cantidad) *
+                    parseFloat(nuevoProducto.precioUnitario || productoActual.precioUnitario)) || 0;
+
+            // Actualizar el producto en Ventas Pasteleria
             await updateDoc(productoRef, {
                 nombre: nuevoProducto.nombre,
                 cantidad: nuevoProducto.cantidad,
                 precioUnitario: nuevoProducto.precioUnitario,
-                tipo: nuevoProducto.tipo
+                tipo: nuevoProducto.tipo,
+                precioTotal: nuevoPrecioTotal // Calcular el precio total
             });
+
+            // Actualizar la factura en Facturas Pasteleria
+            const productoRefFact = doc(db, 'Facturas Pasteleria', facturaId);
+            await updateDoc(productoRefFact, {
+                nombre: nuevoProducto.nombre,
+                cantidad: nuevoProducto.cantidad,
+                precioUnitario: nuevoProducto.precioUnitario,
+                tipo: nuevoProducto.tipo,
+                precioTotal: nuevoPrecioTotal // Calcular el precio total
+            });
+
+            // Limpiar los estados
             setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', tipo: '' });
             setShowModal(false);
             setProductoAActualizar(null);
+
+            console.log('Producto y factura actualizados exitosamente');
         } catch (error) {
             console.error("Error al actualizar producto: ", error);
         }
     };
+
+
 
     const abrirModalActualizar = (producto) => {
         setNuevoProducto({

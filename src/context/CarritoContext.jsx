@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect } from "react";
 import { Toast, ToastContainer } from 'react-bootstrap';
-import { collection, addDoc, getFirestore, updateDoc } from 'firebase/firestore'; // Asegúrate de importar addDoc y collection
+import { collection, addDoc, getFirestore, updateDoc, getDoc, doc } from 'firebase/firestore'; // Asegúrate de importar addDoc y collection
 import { mostrarFacturaPedido } from '../utils/facturaUtil'
 
 
@@ -47,50 +47,63 @@ export const CarritoProvider = ({ children }) => {
 
 
     const finalizarPedido = async () => {
-        try {
-            // Calcular el total
-            const total = carrito.reduce((total, producto) => total + (producto.precio * producto.cantidad), 0);
+        const confirmar = window.confirm('¿Estás seguro de que deseas confirmar este pedido?');
+        if (confirmar){
+            try {
+                // Actualizamos los productos en el carrito con el precioTotal si no existe
+                const carritoActualizado = carrito.map(producto => {
+                    const precioTotal = producto.precioTotal
+                        ? producto.precioTotal // Si ya tiene datos, usar el valor existente
+                        : producto.precioUnitario * producto.cantidad; // Si no, calcular el total
 
-            // Guardar el pedido en Firestore en la colección 'Ventas Pedido'
-            const docRef = await addDoc(collection(db, 'Ventas Pedido'), {
-                carrito, // Los productos en el carrito
-                fecha: new Date(), // Fecha del pedido
-                total, // Total calculado con cantidades
-            });
+                    return {
+                        ...producto, // Copiar las demás propiedades del producto
+                        precioTotal: precioTotal // Actualizar o establecer precioTotal
+                    };
+                });
 
-            // Guardar los datos en la colección 'Factura Ventas Pedido'
+                // Sumar el total del pedido usando precioTotal
+                const totalPedido = carritoActualizado.reduce((total, producto) => total + parseFloat(producto.precioTotal), 0);
+
+                // Guardar el pedido en la colección 'Ventas Pedido'
+                const docRef = await addDoc(collection(db, 'Ventas Pedido'), {
+                    carrito: carritoActualizado, // Los productos en el carrito actualizados
+                    fecha: new Date(), // Fecha del pedido
+                    total: totalPedido, // Total calculado con precios totales
+                });
+
+                // Guardar la factura en la colección 'Factura Ventas Pedido'
                 const facturaRef = await addDoc(collection(db, 'Factura Ventas Pedido'), {
-                carrito, // Los productos en el carrito
-                fecha: new Date(), // Fecha del pedido
-                total, // Total de la factura
-                idPedido: docRef.id // Relacionar con el ID del pedido
-            });
+                    carrito: carritoActualizado, // Los productos en el carrito actualizados
+                    fecha: new Date(), // Fecha del pedido
+                    total: totalPedido, // Total de la factura
+                    idPedido: docRef.id // Relacionar con el ID del pedido
+                });
 
-            // Actualizar el pedido en la colección 'Ventas Pedido' con el ID de la factura
-            await updateDoc(docRef, {
-                idFactura: facturaRef.id // Agregar el ID de la factura al documento del pedido
-            });
+                // Actualizar el pedido en la colección 'Ventas Pedido' con el ID de la factura
+                await updateDoc(docRef, {
+                    idFactura: facturaRef.id // Agregar el ID de la factura al documento del pedido
+                });
 
-            alert('Pedido finalizado con éxito. ID del pedido: ' + docRef.id);
+                // Mostrar el total de la compra finalizada
+                alert('Pedido finalizado con éxito. ID del pedido: ' + docRef.id);
+                mostrarFacturaPedido({
+                    carrito: carritoActualizado,
+                    fecha: new Date(),
+                    total: totalPedido
+                });
 
-            // Llamar a la función para generar la factura después de finalizar el pedido
-            mostrarFacturaPedido({
-                carrito,
-                fecha: new Date(),
-                total
-            });
+                // Limpiar el carrito después de finalizar el pedido
+                setCarrito([]);
+                localStorage.removeItem("carrito");
+                setMostrarToast(false);
 
-            // Limpiar el carrito después de finalizar el pedido
-            setCarrito([]);
-            localStorage.removeItem("carrito");
-            setMostrarToast(false);
-
-        } catch (e) {
-            console.error('Error al finalizar el pedido: ', e);
-            alert('Error al guardar el pedido');
-        }
+            } catch (e) {
+                console.error('Error al finalizar el pedido: ', e);
+                alert('Error al guardar el pedido');
+            }
+        } 
     };
-
 
 
 
