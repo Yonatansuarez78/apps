@@ -23,6 +23,7 @@ export const CarritoProvider = ({ children }) => {
         setCarrito(nuevoCarrito);
         localStorage.setItem("carrito", JSON.stringify(nuevoCarrito));
         setMostrarToast(true);
+        fecha: new Date()
     };
 
     const eliminarProductoDelCarrito = (index) => {
@@ -86,7 +87,7 @@ export const CarritoProvider = ({ children }) => {
                 });
 
                 // Mostrar el total de la compra finalizada
-                alert('Pedido finalizado con éxito. ID del pedido: ' + docRef.id);
+                alert('Pedido finalizado con éxito. Numero de pedido: ' + docRef.id);
                 mostrarFacturaPedido({
                     carrito: carritoActualizado,
                     fecha: new Date(),

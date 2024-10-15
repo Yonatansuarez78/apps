@@ -253,14 +253,17 @@ function Home() {
 
     const AñadirAlCarrito = () => {
         if (nuevoProducto.nombre && nuevoProducto.cantidad && nuevoProducto.precioUnitario) {
-            añadirProductoAlCarrito(nuevoProducto);
+            const productoConCategoria = {
+                ...nuevoProducto,
+                categoria: 'panaderia' // Cambia esto a 'pasteleria' según sea necesario
+            };
+            añadirProductoAlCarrito(productoConCategoria);
             setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
             setShowModal(false)
         } else {
             alert("Todos los campos son requeridos")
         }
     };
-
 
 
     return (

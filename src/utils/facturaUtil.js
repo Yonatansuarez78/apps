@@ -139,27 +139,26 @@ export const mostrarFacturaPedido = (factura) => {
     doc.text("Cant. Descripción   V unitario    Total", 20, lineY);
     doc.line(20, lineY + 5, 100, lineY + 5); // Línea abajo
 
-    // Variables para calcular el total
-    let totalSinIVA = 0;
+    // // Variables para calcular el total
+    // let total = 0;
 
     // Iterar sobre el carrito para mostrar los productos
     factura.carrito.forEach((producto, index) => {
         const yPos = lineY + 15 + index * 10; // Ajustar la posición Y para cada producto
         const cantidad = producto.cantidad;
         const descripcion = producto.nombre;
-        const precioUnitario = parseFloat(producto.precio).toFixed(2);
-        const precioTotal = (producto.precio * producto.cantidad).toFixed(2);
+        const precioUnitario = producto.precioUnitario;
+        const precioTotal = producto.precioTotal;
 
         doc.text(`${cantidad}        ${descripcion}          $${precioUnitario}          $${precioTotal}`, 20, yPos);
-
-        totalSinIVA += parseFloat(precioTotal); // Sumar al total
+        // total = precioTotal; // Sumar al total
+        // console.log(factura)
     });
 
-    // Mostrar totales
-    doc.text(`Total antes de IVA:                                        $${totalSinIVA.toFixed(2)}`, 20, 110);
+    doc.text(`Total antes de IVA:                                        $${factura.total}`, 20, 110);
     doc.text("Total descuento:                                                     0", 20, 115);
     doc.text("Total IVA:                                                              0", 20, 120);
-    doc.text(`Total:                                                              $${totalSinIVA.toFixed(2)}`, 20, 125);
+    doc.text(`Total:                                                              $${factura.total}`, 20, 125);
 
     doc.text("FACTURA SISTEMA POS", 20, 140);
     doc.text("*** GRACIAS POR SU COMPRA ***", 20, 145);

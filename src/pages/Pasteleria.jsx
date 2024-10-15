@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Navbar from '../componentes/Navbar';
 import { getFirestore, collection, addDoc, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
 import { doc, deleteDoc } from "firebase/firestore";
 
 import { mostrarFacturaPasteleria } from '../utils/facturaUtil'
+
+import { CarritoContext } from "../context/CarritoContext";
 
 function Pasteleria() {
     const [productos, setProductos] = useState([]);
@@ -12,6 +14,7 @@ function Pasteleria() {
     const [productoAActualizar, setProductoAActualizar] = useState(null);
 
     const db = getFirestore();
+    const { añadirProductoAlCarrito } = useContext(CarritoContext);
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'Ventas Pasteleria'), (snapshot) => {
@@ -201,6 +204,24 @@ function Pasteleria() {
         mostrarFacturaPasteleria(factura);
     };
 
+    const AñadirAlCarrito = () => {
+        if (nuevoProducto.nombre && nuevoProducto.cantidad && nuevoProducto.precioUnitario) {
+            const productoConCategoria = {
+                ...nuevoProducto,
+                categoria: 'pasteleria' // Cambia esto a 'pasteleria' según sea necesario
+            };
+            añadirProductoAlCarrito(productoConCategoria);
+            setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
+            setShowModal(false);
+        } else {
+            alert("Todos los campos son requeridos");
+        }
+    };
+
+
+
+    
+
 
     return (
         <div>
@@ -267,6 +288,7 @@ function Pasteleria() {
                             </div>
                         </div>
                         <div className="modal-footer">
+                            <button type="button" className="btn btn-success" onClick={AñadirAlCarrito} >Agregar Mas Producto</button>
                             <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cerrar</button>
                             <button type="button" className="btn btn-primary" onClick={() => productoAActualizar ? actualizarProducto(productoAActualizar) : agregarProducto()}>
                                 {productoAActualizar ? 'Actualizar Producto' : 'Agregar Producto'}
