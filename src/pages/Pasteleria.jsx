@@ -24,6 +24,7 @@ function Pasteleria() {
 
         return () => unsubscribe();
     }, [db]);
+    
 
     const agregarProducto = async () => {
         try {
@@ -220,8 +221,6 @@ function Pasteleria() {
 
 
 
-    
-
 
     return (
         <div>
@@ -231,7 +230,7 @@ function Pasteleria() {
                 setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', tipo: '' });
                 setProductoAActualizar(null);
             }}>
-                Agregar Producto
+                Agregar Pasteleria
             </button>
 
             <div className={`modal ${showModal ? 'show' : ''}`} style={{ display: showModal ? 'block' : 'none' }} tabIndex="-1">

@@ -274,7 +274,7 @@ function Home() {
                 setNuevoProducto({ nombre: '', cantidad: '', precioUnitario: '', precioTotal: '' });
                 setProductoAActualizar(null);
             }}>
-                Agregar Producto
+                Agregar Panaderia
             </button>
 
             <div className={`modal ${showModal ? 'show' : ''}`} style={{ display: showModal ? 'block' : 'none' }} tabIndex="-1">
