@@ -4,6 +4,8 @@ import Navbar from '../componentes/Navbar';
 import { collection, addDoc, updateDoc, doc, Timestamp, query, orderBy, getDocs, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';  // Asegúrate de haber inicializado Firebase y Firestore
 
+import { mostrarFacturaAlmuerzos } from '../utils/facturaUtil'
+
 function Almuerzos() {
     const [showModal, setShowModal] = useState(false);
     const [numAlmuerzos, setNumAlmuerzos] = useState(1);
@@ -129,8 +131,12 @@ function Almuerzos() {
 
 
     
-    const descargarFactura = (pedido) => {
-        alert(`Descargando factura del pedido: ${pedido.id}`);
+    const generarFactura = (almuerzos) => {
+        const confirmarDescarga = window.confirm("¿Deseas descargar la factura?");
+        if (confirmarDescarga) {
+            mostrarFacturaAlmuerzos(almuerzos);
+        }
+
     };
 
     const eliminarPedido = async (pedidoId) => {
@@ -306,14 +312,14 @@ function Almuerzos() {
                                     <span> * {almuerzo.sopa}, {almuerzo.principio}, {almuerzo.carne}</span>
                                     <span>{almuerzo.arroz ? ", Arroz" : ""}</span>
                                     <span>{almuerzo.limonada ? ", Limonada" : ""}</span>
-                                    <span>{almuerzo.otros && `, Otros: ${almuerzo.otros}`}</span>
+                                    <span>{almuerzo.otros && `, ${almuerzo.otros}`}</span>
                                     <span className="d-block">Precio: ${almuerzo.precio}</span>
                                 </div>
                             ))}
 
                             <div className="d-flex justify-content-end mt-1">
                                 <button className="btn btn-warning btn-sm me-1" onClick={() => ActualizarPedido(pedido)}>Actualizar</button>
-                                <button className="btn btn-info btn-sm me-1" onClick={() => descargarFactura(pedido)}>Imprimir</button>
+                                <button className="btn btn-info btn-sm me-1" onClick={() => generarFactura(pedido)}>Imprimir</button>
                                 <button className="btn btn-danger btn-sm" onClick={() => eliminarPedido(pedido.id)}>Eliminar</button>
                             </div>
                         </div>
