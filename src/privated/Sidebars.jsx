@@ -1,8 +1,25 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/privated/sidebars.css';
+import { signOut, getAuth } from 'firebase/auth';
+import { app } from '../firebaseConfig';
+import { useNavigate } from 'react-router-dom';
 
 function Sidebars() {
+    const auth = getAuth(app);
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            alert("Sesión cerrada");
+            navigate('/Home'); // Redirige al usuario al inicio o a otra ruta de tu preferencia
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+        }
+    };
+
+
     return (
         <div>
             <div className="d-flex flex-column flex-shrink-0 p-3 text-bg-dark" style={{ width: '280px', height: '100vh' }}>
@@ -54,7 +71,7 @@ function Sidebars() {
                         <li><a className="dropdown-item" href="#">Settings</a></li>
                         <li><a className="dropdown-item" href="#">Profile</a></li>
                         <li><hr className="dropdown-divider" /></li>
-                        <li><a className="dropdown-item" href="#">Sign out</a></li>
+                        <li className="dropdown-item" onClick={() => { handleLogout(); }}>Sign out</li>
                     </ul>
                 </div>
             </div>
