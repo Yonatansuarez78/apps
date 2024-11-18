@@ -5,15 +5,16 @@ import Home from './pages/Home';
 import Pasteleria from './pages/Pasteleria';
 import Almuerzos from './pages/Almuerzos';
 
-import Login from './pagesPrivate/Login';
+import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 
 import EstadoVentas from './privated/EstadoVentas';
 import Sidebars from './privated/Sidebars';
 import HomePrivated from './privated/HomePrivated';
+import Orders from './privated/Orders';
 
 import { CarritoProvider } from './context/CarritoContext';
-import PrivateRoute from './componentes/PrivateRoute';  // Importar el componente PrivateRoute
+import PrivateRoute from './utils/PrivateRoute';  // Importar el componente PrivateRoute
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/Sidebars" element={<PrivateRoute element={<Sidebars />} />} />
           <Route path="/EstadoVentas" element={<PrivateRoute element={<EstadoVentas />} />} />
           <Route path="/HomePrivated" element={<PrivateRoute element={<HomePrivated />} />} />
+          <Route path="/Orders" element={<PrivateRoute element={<Orders />} />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

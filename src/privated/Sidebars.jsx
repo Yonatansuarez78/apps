@@ -36,15 +36,15 @@ function Sidebars() {
                         </Link>
                     </li>
                     <li>
-                        <Link to="/dashboard" className="nav-link text-white">
+                        <Link to="/Orders" className="nav-link text-white">
                             <svg className="bi pe-none me-2" width="16" height="16"><use xlinkHref="#speedometer2" /></svg>
-                            Dashboard
+                            Ordenes
                         </Link>
                     </li>
                     <li>
                         <Link to="/orders" className="nav-link text-white">
                             <svg className="bi pe-none me-2" width="16" height="16"><use xlinkHref="#table" /></svg>
-                            Orders
+                            Or
                         </Link>
                     </li>
                     <li>
