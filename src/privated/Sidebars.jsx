@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';  // Importar useLocation
 import { signOut, getAuth } from 'firebase/auth';
 import { app } from '../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
-import '../styles/privated/Sidebars.css'
+import '../styles/privated/sidebars.css'
 
 function Sidebars() {
     const auth = getAuth(app);
