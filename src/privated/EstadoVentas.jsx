@@ -9,12 +9,15 @@ import { Spinner } from 'react-bootstrap';
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const EstadoVentas = () => {
-    const [panaderiaData, setPanaderiaData] = useState(null);
-    const [pasteleriaData, setPasteleriaData] = useState(null);
-    const [almuerzosData, setAlmuerzosData] = useState(null);
+    const [salesData, setSalesData] = useState({
+        panaderia: null,
+        pasteleria: null,
+        almuerzos: null,
+        pedido: null,
+    });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [filter, setFilter] = useState('last5days');  // Estado para el filtro
+    const [filter, setFilter] = useState('last5days');
 
     const dateRanges = {
         last5days: (today) => Array.from({ length: 5 }, (_, i) => format(subDays(today, i), 'dd/MM/yyyy')),
@@ -23,105 +26,64 @@ const EstadoVentas = () => {
         last5years: (today) => Array.from({ length: 5 }, (_, i) => format(subYears(today, i), 'yyyy')),
     };
 
+    const fetchSalesData = async () => {
+        try {
+            const today = new Date();
+            const lastNDays = dateRanges[filter](today);
+            const collections = ['Ventas Panaderia', 'Ventas Pasteleria', 'Ventas Almuerzos', 'Ventas Pedido'];
+            const salesPromises = collections.map((collectionName) => getDocs(collection(db, collectionName)));
+
+            // Esperamos todas las promesas de las colecciones de ventas
+            const snapshots = await Promise.all(salesPromises);
+
+            const processSalesData = (sales, collectionName) => {
+                const salesByPeriod = {};
+                sales.forEach(sale => {
+                    const saleDate = sale.fecha.toDate();
+                    const period = format(saleDate, filter === 'last5months' ? 'MM/yyyy' : filter === 'last5years' ? 'yyyy' : 'dd/MM/yyyy');
+                    if (!salesByPeriod[period]) salesByPeriod[period] = 0;
+
+                    let totalSale = 0;
+                    if (collectionName === 'Ventas Pedido') {
+                        // Iterar sobre cada item en el carrito para sumar el precioTotal
+                        sale.carrito.forEach(item => {
+                            totalSale += parseFloat(item.precioTotal);
+                        });
+                    } else {
+                        totalSale = sale.precioTotal || sale.total || 0;
+                    }
+
+                    salesByPeriod[period] += totalSale;
+                });
+
+                return lastNDays.reduce((acc, period) => {
+                    acc[period] = salesByPeriod[period] || 0;
+                    return acc;
+                }, {});
+            };
+
+            const salesDataProcessed = {};
+            collections.forEach((collectionName, index) => {
+                const sales = snapshots[index].docs.map(doc => doc.data());
+                salesDataProcessed[collectionName] = processSalesData(sales, collectionName);
+            });
+
+            setSalesData({
+                panaderia: salesDataProcessed['Ventas Panaderia'],
+                pasteleria: salesDataProcessed['Ventas Pasteleria'],
+                almuerzos: salesDataProcessed['Ventas Almuerzos'],
+                pedido: salesDataProcessed['Ventas Pedido'],
+            });
+            setLoading(false);
+        } catch (err) {
+            setError('Error al cargar los datos');
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchSalesData = async () => {
-            try {
-                const today = new Date();
-                const lastNDays = dateRanges[filter](today);  // Filtrado según la opción seleccionada
-
-                // Obtener datos de Ventas Panadería
-                const panaderiaSnapshot = await getDocs(collection(db, 'Ventas Panaderia'));
-                const panaderiaSales = panaderiaSnapshot.docs.map(doc => doc.data());
-
-                const salesByPeriodPanaderia = {};
-                panaderiaSales.forEach(sale => {
-                    const saleDate = sale.fecha.toDate();
-                    const period = format(saleDate, filter === 'last5months' ? 'MM/yyyy' : filter === 'last5years' ? 'yyyy' : 'dd/MM/yyyy');
-                    if (!salesByPeriodPanaderia[period]) salesByPeriodPanaderia[period] = 0;
-                    salesByPeriodPanaderia[period] += sale.precioTotal;
-                });
-
-                const filteredPanaderiaData = lastNDays.reduce((acc, period) => {
-                    acc[period] = salesByPeriodPanaderia[period] || 0;
-                    return acc;
-                }, {});
-
-                setPanaderiaData({
-                    labels: Object.keys(filteredPanaderiaData),
-                    datasets: [{
-                        label: 'Ventas Panadería',
-                        data: Object.values(filteredPanaderiaData),
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        borderWidth: 1,
-                    }],
-                });
-
-                // Obtener datos de Ventas Pastelería
-                const pasteleriaSnapshot = await getDocs(collection(db, 'Ventas Pasteleria'));
-                const pasteleriaSales = pasteleriaSnapshot.docs.map(doc => doc.data());
-
-                const salesByPeriodPasteleria = {};
-                pasteleriaSales.forEach(sale => {
-                    const saleDate = sale.fecha.toDate();
-                    const period = format(saleDate, filter === 'last5months' ? 'MM/yyyy' : filter === 'last5years' ? 'yyyy' : 'dd/MM/yyyy');
-                    if (!salesByPeriodPasteleria[period]) salesByPeriodPasteleria[period] = 0;
-                    salesByPeriodPasteleria[period] += sale.precioTotal;
-                });
-
-                const filteredPasteleriaData = lastNDays.reduce((acc, period) => {
-                    acc[period] = salesByPeriodPasteleria[period] || 0;
-                    return acc;
-                }, {});
-
-                setPasteleriaData({
-                    labels: Object.keys(filteredPasteleriaData),
-                    datasets: [{
-                        label: 'Ventas Pastelería',
-                        data: Object.values(filteredPasteleriaData),
-                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
-                        borderColor: 'rgba(255, 159, 64, 1)',
-                        borderWidth: 1,
-                    }],
-                });
-
-                // Obtener datos de Ventas Almuerzos
-                const almuerzosSnapshot = await getDocs(collection(db, 'Ventas Almuerzos'));
-                const almuerzosSales = almuerzosSnapshot.docs.map(doc => doc.data());
-
-                const salesByPeriodAlmuerzos = {};
-                almuerzosSales.forEach(sale => {
-                    const saleDate = sale.fecha.toDate();
-                    const period = format(saleDate, filter === 'last5months' ? 'MM/yyyy' : filter === 'last5years' ? 'yyyy' : 'dd/MM/yyyy');
-                    if (!salesByPeriodAlmuerzos[period]) salesByPeriodAlmuerzos[period] = 0;
-                    salesByPeriodAlmuerzos[period] += sale.total;
-                });
-
-                const filteredAlmuerzosData = lastNDays.reduce((acc, period) => {
-                    acc[period] = salesByPeriodAlmuerzos[period] || 0;
-                    return acc;
-                }, {});
-
-                setAlmuerzosData({
-                    labels: Object.keys(filteredAlmuerzosData),
-                    datasets: [{
-                        label: 'Ventas Almuerzos',
-                        data: Object.values(filteredAlmuerzosData),
-                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        borderWidth: 1,
-                    }],
-                });
-
-                setLoading(false);
-            } catch (err) {
-                setError('Error al cargar los datos');
-                setLoading(false);
-            }
-        };
-
         fetchSalesData();
-    }, [filter]);  // Ejecuta el fetch cada vez que cambia el filtro
+    }, [filter]);
 
     const renderChart = (data, label) => (
         loading ? (
@@ -132,7 +94,16 @@ const EstadoVentas = () => {
         ) : error ? (
             <p>{error}</p>
         ) : (
-            <Bar data={data} options={{ responsive: true, maintainAspectRatio: false }} />
+            <Bar data={{
+                labels: Object.keys(data),
+                datasets: [{
+                    label: label,
+                    data: Object.values(data),
+                    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                }],
+            }} options={{ responsive: true, maintainAspectRatio: false }} />
         )
     );
 
@@ -150,26 +121,14 @@ const EstadoVentas = () => {
                         <option value="last5years">Últimos 5 años</option>
                     </select>
                 </div>
-                <div className="col-12 col-md-6">
-                    <h5>Ventas Panadería</h5>
-                    <div className="chart-container" style={{ height: '250px' }}>
-                        {renderChart(panaderiaData, 'Panadería')}
+                {['panaderia', 'pasteleria', 'almuerzos', 'pedido'].map((category) => (
+                    <div key={category} className="col-12 col-md-6">
+                        <h5>{`Ventas ${category.charAt(0).toUpperCase() + category.slice(1)}`}</h5>
+                        <div className="chart-container" style={{ height: '250px' }}>
+                            {renderChart(salesData[category], `Ventas ${category.charAt(0).toUpperCase() + category.slice(1)}`)}
+                        </div>
                     </div>
-                </div>
-                <div className="col-12 col-md-6">
-                    <h5>Ventas Pastelería</h5>
-                    <div className="chart-container" style={{ height: '250px' }}>
-                        {renderChart(pasteleriaData, 'Pastelería')}
-                    </div>
-                </div>
-            </div>
-            <div className="row">
-                <div className="col-12 col-md-6">
-                    <h5>Ventas Almuerzos</h5>
-                    <div className="chart-container" style={{ height: '250px' }}>
-                        {renderChart(almuerzosData, 'Almuerzos')}
-                    </div>
-                </div>
+                ))}
             </div>
         </div>
     );

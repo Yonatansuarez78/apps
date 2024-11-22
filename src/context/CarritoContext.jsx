@@ -78,12 +78,12 @@ export const CarritoProvider = ({ children }) => {
                     carrito: carritoActualizado, // Los productos en el carrito actualizados
                     fecha: new Date(), // Fecha del pedido
                     total: totalPedido, // Total de la factura
-                    idPedido: docRef.id // Relacionar con el ID del pedido
+                    idVenta: docRef.id // Relacionar con el ID del pedido
                 });
 
                 // Actualizar el pedido en la colección 'Ventas Pedido' con el ID de la factura
                 await updateDoc(docRef, {
-                    idFactura: facturaRef.id // Agregar el ID de la factura al documento del pedido
+                    facturaId: facturaRef.id // Agregar el ID de la factura al documento del pedido
                 });
 
                 // Mostrar el total de la compra finalizada

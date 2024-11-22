@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebaseConfig';  // Importar correctamente db de la configuración de Firebase
-import { collection, getDocs, orderBy, query } from 'firebase/firestore'; // Importar las funciones necesarias
+import { collection, getDocs, orderBy, query, getDoc, doc, deleteDoc } from 'firebase/firestore'; // Importar las funciones necesarias
 import Sidebars from './Sidebars';
+
+import { mostrarFactura, mostrarFacturaPasteleria, mostrarFacturaPedido, mostrarFacturaAlmuerzos } from '../utils/facturaUtil'
 
 function Orders() {
     const [ventasPanaderia, setVentasPanaderia] = useState([]);
@@ -45,15 +47,86 @@ function Orders() {
         // Aquí puedes implementar la lógica de actualización
     };
 
-    const handleDelete = (id) => {
-        console.log("Eliminar producto con id:", id);
-        // Lógica para eliminar el documento de Firestore
+
+    const handleDelete = async (id, collectionName) => {
+        const confirmacion = window.confirm("¿Estás seguro de que deseas eliminar este pedido?");
+        if (!confirmacion) return;
+
+        try {
+            let collectionRef;
+            let facturaCollection; // Variable para la colección de facturas
+            // Seleccionamos la colección de ventas según el nombre recibido
+            switch (collectionName) {
+                case 'Ventas Panaderia':
+                    collectionRef = collection(db, 'Ventas Panaderia');
+                    facturaCollection = 'Facturas Panaderia'; // Colección de facturas asociada
+                    break;
+                case 'Ventas Pasteleria':
+                    collectionRef = collection(db, 'Ventas Pasteleria');
+                    facturaCollection = 'Facturas Pasteleria';
+                    break;
+                case 'Ventas Pedido':
+                    collectionRef = collection(db, 'Ventas Pedido');
+                    facturaCollection = 'Factura Ventas Pedido';
+                    break;
+                case 'Ventas Almuerzos':
+                    collectionRef = collection(db, 'Ventas Almuerzos');
+                    facturaCollection = 'Facturas Almuerzos';
+                    break;
+                default:
+                    alert("Colección no válida.");
+                    return;
+            }
+
+            // Obtener la referencia al documento del pedido
+            const pedidoDocRef = doc(collectionRef, id);
+            const pedidoSnapshot = await getDoc(pedidoDocRef);
+
+            if (pedidoSnapshot.exists()) {
+                const pedidoData = pedidoSnapshot.data();
+                const facturaId = pedidoData.facturaId; // ID de la factura asociada
+                await deleteDoc(pedidoDocRef);
+                // Si hay una factura asociada, eliminarla también de la colección correspondiente
+                if (facturaId) {
+                    const facturaDocRef = doc(db, facturaCollection, facturaId);
+                    await deleteDoc(facturaDocRef);
+                    alert('pedido eliminado correctamente')
+                }
+                // Ahora recargamos los datos
+                await fetchData();  // Esperamos a que fetchData recargue los datos
+            } else {
+                alert("El pedido no existe o ya ha sido eliminado");
+            }
+        } catch (error) {
+            alert("Hubo un error al intentar eliminar el pedido");
+            console.error(error);
+        }
     };
 
-    const handlePrint = () => {
-        console.log("Imprimir");
-        window.print(); // Esto abrirá el cuadro de diálogo para imprimir
+
+
+
+    const handlePrint = async (venta, collectionName) => {
+        const collectionMap = {
+            'Ventas Panaderia': mostrarFactura,
+            'Ventas Pasteleria': mostrarFacturaPasteleria,
+            'Ventas Pedido': mostrarFacturaPedido,
+            'Ventas Almuerzos': mostrarFacturaAlmuerzos
+        };
+
+        const facturaFunction = collectionMap[collectionName];
+        if (facturaFunction) {
+            try {
+                await facturaFunction(venta);
+            } catch (error) {
+                console.error("Error al generar la factura:", error);
+            }
+        } else {
+            console.error("Colección no reconocida para la generación de factura.");
+        }
     };
+
+
 
     const formatFechaYHora = (timestamp) => {
         const date = new Date(timestamp.seconds * 1000); // Convertir el Timestamp de Firestore a objeto Date
@@ -64,7 +137,7 @@ function Orders() {
     };
 
     // Renderizar tabla
-    const renderTable = (ventas) => {
+    const renderTable = (ventas, collectionName) => {
         return (
             <table className="table table-striped mt-3">
                 <thead>
@@ -89,8 +162,9 @@ function Orders() {
                             <td>{formatFechaYHora(venta.fecha)}</td>
                             <td>
                                 <button className="btn btn-warning me-2" onClick={() => handleUpdate(venta.id)}>Actualizar</button>
-                                <button className="btn btn-danger me-2" onClick={() => handleDelete(venta.id)}>Eliminar</button>
-                                <button className="btn btn-info" onClick={handlePrint}>Imprimir</button>
+                                <button className="btn btn-danger me-2" onClick={() => handleDelete(venta.id, collectionName)}>Eliminar</button>
+                                <button className="btn btn-info" onClick={() => handlePrint(venta, 'Ventas Panaderia')}>Imprimir</button>
+
                             </td>
                         </tr>
                     ))}
@@ -123,16 +197,16 @@ function Orders() {
 
                 <div className="tab-content" id="tab-ventas-content">
                     <div className="tab-pane fade show active" id="panaderia" role="tabpanel" aria-labelledby="panaderia-tab">
-                        {renderTable(ventasPanaderia)}
+                        {renderTable(ventasPanaderia, 'Ventas Panaderia')}
                     </div>
                     <div className="tab-pane fade" id="pasteleria" role="tabpanel" aria-labelledby="pasteleria-tab">
-                        {renderTable(ventasPasteleria)}
+                        {renderTable(ventasPasteleria, 'Ventas Pasteleria')}
                     </div>
                     <div className="tab-pane fade" id="pedido" role="tabpanel" aria-labelledby="pedido-tab">
-                        {renderTable(ventasPedido)}
+                        {renderTable(ventasPedido, 'Ventas Pedido')}
                     </div>
                     <div className="tab-pane fade" id="almuerzos" role="tabpanel" aria-labelledby="almuerzos-tab">
-                        {renderTable(ventasAlmuerzos)}
+                        {renderTable(ventasAlmuerzos, 'Ventas Almuerzos')}
                     </div>
                 </div>
             </div>

@@ -12,6 +12,7 @@ import EstadoVentas from './privated/EstadoVentas';
 import Sidebars from './privated/Sidebars';
 import HomePrivated from './privated/HomePrivated';
 import Orders from './privated/Orders';
+import Perfil from './privated/Perfil';
 
 import { CarritoProvider } from './context/CarritoContext';
 import PrivateRoute from './utils/PrivateRoute';  // Importar el componente PrivateRoute
@@ -32,6 +33,9 @@ function App() {
           <Route path="/EstadoVentas" element={<PrivateRoute element={<EstadoVentas />} />} />
           <Route path="/HomePrivated" element={<PrivateRoute element={<HomePrivated />} />} />
           <Route path="/Orders" element={<PrivateRoute element={<Orders />} />} />
+          <Route path="/Perfil" element={<PrivateRoute element={<Perfil />} />} />
+
+          
 
           <Route path="*" element={<NotFound />} />
         </Routes>
